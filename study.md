@@ -1,5 +1,5 @@
-
 # 1. 安装nest脚手架
+
 *需要node版本 > v18.17.0*可以使用nvm下载最新的LTS长期支持版本
 ````bash
 npm i -g @nestjs/cli
@@ -161,6 +161,57 @@ async function bootstrap() {
 npm install multer -S 
 npm install @types/multer -D
 ```
+
+#### 实现一个文件上传接口
+
+
+````typescript
+// File upload.module.ts
+import { MulterModule } from "@nestjs/platform-express";
+import { diskStorage } from "multer";
+
+@Module({
+  controllers: [UploadController],
+  providers: [UploadService],
+  imports: [
+    MulterModule.register({
+      storage: diskStorage({
+        destination: join(__dirname, "../uploads"), // 存放地址
+        filename: (req, file, cb) => {
+          // 对接收到的文件重新命名并存放在本地
+          const fileName = `${new Date().getTime() + extname(file.originalname)}`;
+          return cb(null, fileName);
+        },
+      }),
+    }),
+  ],
+})
+
+
+// File upload.controller.ts
+import {
+  Controller,
+  Post,
+  UseInterceptors,
+  UploadedFile,
+} from "@nestjs/common";
+import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
+
+@Controller("upload")
+export class UploadController {
+  constructor(private readonly uploadService: UploadService) {}
+
+  @Post("images")
+  @UseInterceptors(FileInterceptor("file")) // file是接受字段名
+  uploadImages(@UploadedFile() file) { // 装饰器装饰
+    console.log(file);
+    return true;
+  }
+}
+
+````
+
+
 
 
 
