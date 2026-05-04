@@ -151,3 +151,16 @@ async function bootstrap() {
 }
 ````
 
+### 文件上传
+
+需要安装以下依赖
+
+`@nestjs/platform-express`为nestjs自带
+
+```bash
+npm install multer -S 
+npm install @types/multer -D
+```
+
+
+

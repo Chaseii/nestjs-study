@@ -3,6 +3,8 @@ import { AppModule } from "./app.module";
 import { VersioningType } from "@nestjs/common";
 import session from "express-session";
 import { Request, Response, NextFunction } from "express";
+import { NestExpressApplication } from "@nestjs/platform-express";
+import { join } from "path";
 
 const globalMiddleware = (req: Request, res: Response, next: NextFunction) => {
   console.log("全局中间件：", req.method, req.originalUrl ?? req.url);
@@ -11,7 +13,14 @@ const globalMiddleware = (req: Request, res: Response, next: NextFunction) => {
 
 async function bootstrap() {
   // 新版本 集成跨域功能 可以不使用cors中间件解决跨域问题
-  const app = await NestFactory.create(AppModule, { cors: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    cors: true,
+  });
+
+  app.useStaticAssets(join(__dirname, "uploads"), {
+    prefix: "/uploads",
+  });
+
   app.enableVersioning({
     type: VersioningType.URI,
   });
