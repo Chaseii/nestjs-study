@@ -6,6 +6,7 @@ import { Request, Response, NextFunction } from "express";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { ResponseInterception } from "./common/response"; // 导入全局响应拦截器
 import { HttpExceptionFilter } from "./common/filter"; // 导入全局异常过滤器
+import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 // import { RoleGuard } from "./role/role.guard";
 import { join } from "path";
 
@@ -19,6 +20,16 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     cors: true,
   });
+
+  const options = new DocumentBuilder()
+    .setTitle("hahha")
+    .setDescription("xxx")
+    .setVersion("1")
+    .build();
+
+  const document = SwaggerModule.createDocument(app, options);
+
+  SwaggerModule.setup("/api-docs", app, document);
 
   app.useStaticAssets(join(__dirname, "uploads"), {
     prefix: "/uploads",
