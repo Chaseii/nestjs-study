@@ -5,11 +5,14 @@ import {
   ParseIntPipe,
   Post,
   Body,
+  UseGuards,
+  SetMetadata,
 } from "@nestjs/common";
 import { PService } from "./p.service";
 import { CreatePDto } from "./dto/create-p.dto";
-// import { PPipe } from "./dto/create-p.dto";
+import { RoleGuard } from "src/role/role.guard";
 @Controller("p")
+@UseGuards(RoleGuard)
 export class PController {
   constructor(private readonly pService: PService) {}
 
@@ -19,12 +22,8 @@ export class PController {
     return this.pService.findOne(+id);
   }
 
-  // @Post("create")
-  // create(@Body(PPipe) createPDto: CreatePDto) {
-  //   console.log(createPDto);
-  //   return this.pService.create(createPDto);
-  // }
   @Post("create")
+  @SetMetadata("role", ["admin"])
   create(@Body() createDto: CreatePDto) {
     console.log(createDto);
     return true;

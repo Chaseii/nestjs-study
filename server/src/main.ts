@@ -6,6 +6,7 @@ import { Request, Response, NextFunction } from "express";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { ResponseInterception } from "./common/response"; // 导入全局响应拦截器
 import { HttpExceptionFilter } from "./common/filter"; // 导入全局异常过滤器
+// import { RoleGuard } from "./role/role.guard";
 import { join } from "path";
 
 const globalMiddleware = (req: Request, res: Response, next: NextFunction) => {
@@ -32,6 +33,7 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new ResponseInterception());
   app.useGlobalPipes(new ValidationPipe());
+  // app.useGlobalGuards(new RoleGuard());
 
   await app.listen(process.env.PORT ?? 3000);
 }
