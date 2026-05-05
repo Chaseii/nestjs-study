@@ -373,11 +373,46 @@ export class PController {
 
 ### 全局守卫
 
-
-
 ```typescript
 // main.ts
 import { RoleGuard } from "./role/role.guard";
 app.useGlobalGuards(new RoleGuard()); // 注册全局守卫
 ```
+
+
+
+## 自定义装饰器
+
+使用 `nest g d role` 会创建一个 role.decorator.ts 文件
+
+```typescript
+// File role.decorator.ts
+import { SetMetadata } from "@nestjs/common";
+
+export const Role = (...args: string[]) => SetMetadata("role", args);
+
+
+// xx.controller.ts
+import { Role } from "../role/role.decorator";
+@Controller("p")
+@UseGuards(RoleGuard)
+export class PController {
+  constructor(private readonly pService: PService) {}
+
+  @Get(":id")
+  findOne(@Param("id", ParseIntPipe) id: number) {
+    console.log(typeof id); // string
+    return this.pService.findOne(+id);
+  }
+
+  @Post("create")
+  @Role("admin") // 注意这里与 @SetMetadata("role", ["admin"]) 实现的效果是一致的
+  create(@Body() createDto: CreatePDto) {
+    console.log(createDto);
+    return true;
+  }
+}
+```
+
+
 

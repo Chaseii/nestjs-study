@@ -6,11 +6,11 @@ import {
   Post,
   Body,
   UseGuards,
-  SetMetadata,
 } from "@nestjs/common";
 import { PService } from "./p.service";
 import { CreatePDto } from "./dto/create-p.dto";
 import { RoleGuard } from "src/role/role.guard";
+import { Role } from "../role/role.decorator";
 @Controller("p")
 @UseGuards(RoleGuard)
 export class PController {
@@ -23,7 +23,7 @@ export class PController {
   }
 
   @Post("create")
-  @SetMetadata("role", ["admin"])
+  @Role("admin", "sub")
   create(@Body() createDto: CreatePDto) {
     console.log(createDto);
     return true;
