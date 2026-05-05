@@ -211,90 +211,170 @@ export class UploadController {
 
 ````
 
-### 全局响应拦截器
+### 管道
+
+管道可以做两件事情
+
+1. 转换，可以将前端传入的数据转换成我们需要的数据
+2. 验证，类似于前端的rules配置验证规则
+
+nestjs内置提供了8个转换api
+
+* ValidationPipe
+* ParseIntPipe
+* ParseFloatPipe
+* ParseBoolPipe
+* ParseArrayPipe
+* ParseUUIDPipe
+* ParseEnumPipe
+* DefaultValuePipe
+
+#### 转换
 
 ````typescript
-// File common/response.ts
-import { Injectable, CallHandler, NestInterceptor } from "@nestjs/common";
-import { map } from "rxjs/operators";
-import { Observable } from "rxjs";
+// File xx.controll.ts
+import { Controller, Get, Param, ParseIntPipe } from "@nestjs/common"; // nestjs内置的管道转换api都在@nestjs/common中
+import { PService } from "./p.service";
+import { CreatePDto } from "./dto/create-p.dto";
+import { UpdatePDto } from "./dto/update-p.dto";
+import { P } from "./entities/p.entity";
 
-interface Data<T> {
-  data: T;
-}
+@Controller("p")
+export class PController {
+  constructor(private readonly pService: PService) {}
 
-@Injectable()
-export class ResponseInterception<T> implements NestInterceptor {
-  intercept(context, next: CallHandler): Observable<Data<T>> {
-    return next.handle().pipe(
-      map((data: T) => {
-        return {
-          data: data,
-          status: 0,
-          message: "操作成功",
-          success: true,
-        };
-      }),
-    );
+  @Get(":id")
+  findOne(@Param("id", ParseIntPipe) id: number) { // 在装饰器第二个参数中使用 ParseIntPipe ParseUUIDPipe.......
+    console.log(typeof id); // 这里本来是string类型，通过ParseIntPipe转换成了number类型
+    return this.pService.findOne(+id);
   }
-}
-
-// File main.ts
-import { NestExpressApplication } from "@nestjs/platform-express";
-import { ResponseInterception } from "./common/response";
-
-
-async function bootstrap() {
-		const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-      cors: true,
-    });
-  	app.useGlobalInterceptors(new ResponseInterception()); // 注册响应拦截器
 }
 ````
 
-### 全局异常过滤器
+#### 验证
 
-```typescript
-// File common/filter
+DTO  data transfer object
+
+使用nest --help 查看命令
+
+使用nest g pi moduleName 创建.pipe.ts 文件
+
+```bash
+nest g pi moduleName
+```
+
+通过`nest g res moduleName`创建的文件默认会生成一个dto文件夹，在这里面可以设置校验
+
+代码示例
+
+需要下面两个依赖
+
+```bash
+npm i --save class-validator class-transformer
+```
+
+````typescript
+// 方案1
+// File dto/create-user.dto.ts
+import { IsNotEmpty, IsString, Length } from "class-validator";
+export class CreatePDto {
+  @IsNotEmpty({
+    message: "名称不能为空",
+  })
+  @IsString({
+    message: "名称必须是字符串",
+  })
+  @Length(2, 10, {
+    message: "名称是2-10个字符",
+  })
+  name: string | undefined;
+  age: number | undefined;
+}
+
+// File user.pipe.ts
 import {
-  ExceptionFilter,
-  Catch,
-  ArgumentsHost,
-  HttpException,
+  ArgumentMetadata,
+  Injectable,
+  PipeTransform,
+  BadRequestException,
 } from "@nestjs/common";
+import { CreateUserDto } from "./dto/create-user.dto";
+import { plainToInstance, ClassConstructor } from "class-transformer";
+import { validate } from "class-validator";
 
-import { Request, Response } from "express";
+@Injectable()
+export class UserPipe implements PipeTransform {
+  async transform(value: any, metadata: ArgumentMetadata): Promise<any> {
+    if (!metadata || !metadata.metatype) {
+      return value;
+    }
+    // plainToInstance 接受的第一个参数是一个ClassConstructor<T>泛型
+    const DTO = plainToInstance(
+      metadata.metatype as ClassConstructor<CreatePDto>,
+      value,
+    );
+    const errors = await validate(DTO);
+    console.log(errors);
+    if (errors.length) {
+      throw new BadRequestException(errors);
+    }
 
-@Catch(HttpException)
-export class HttpExceptionFilter implements ExceptionFilter {
-  catch(exception: HttpException, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
-    const status = exception.getStatus();
-    response.status(status).json({
-      success: false,
-      time: new Date().toISOString(),
-      data: exception.message,
-      status,
-      path: request.url,
-    });
+    return value;
+  }
+}
+
+// File user.controller.ts
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Body,
+} from "@nestjs/common";
+import { UserPipe } from "./dto/create-user.dto";
+
+@Controller("user")
+export class UserController {
+	constructor(private readonly UserService: UserService) {}
+  
+  @Post("create")
+  create(@Body(UserPipe) createPDto: CreatePDto) { // 将userPipe 放在body装饰器中
+   	console.log(createPDto);
+  	return this.pService.create(createPDto);
   }
 }
 
 
-// File main.ts
-import { NestExpressApplication } from "@nestjs/platform-express";
-import { HttpExceptionFilter } from "./common/filter";
-
-
-async function bootstrap() {
-		const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-      cors: true,
-    });
-  	app.useGlobalFilters(new HttpExceptionFilter()); // 注册全局异常过滤器
+// 方案2 使用全局配置方案
+// File dto/create-user.dto.ts
+import { IsNotEmpty, IsString, Length } from "class-validator";
+export class CreatePDto {
+  @IsNotEmpty({
+    message: "名称不能为空",
+  })
+  @IsString({
+    message: "名称必须是字符串",
+  })
+  @Length(2, 10, {
+    message: "名称是2-10个字符",
+  })
+  name: string | undefined;
+  age: number | undefined;
 }
-```
 
+// File main.ts
 
+import { ValidationPipe } from "@nestjs/common";
+async function bootstrap() {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    cors: true,
+  });
+  
+  app.useGlobalPipes(new ValidationPipe()); // 注册全局管道验证
+  
+  await app.listen(process.env.PORT ?? 3000);
+}
+
+````
 

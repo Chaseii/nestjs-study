@@ -1,6 +1,6 @@
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
-import { VersioningType } from "@nestjs/common";
+import { VersioningType, ValidationPipe } from "@nestjs/common";
 import session from "express-session";
 import { Request, Response, NextFunction } from "express";
 import { NestExpressApplication } from "@nestjs/platform-express";
@@ -31,6 +31,7 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new ResponseInterception());
+  app.useGlobalPipes(new ValidationPipe());
 
   await app.listen(process.env.PORT ?? 3000);
 }
