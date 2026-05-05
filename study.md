@@ -211,7 +211,90 @@ export class UploadController {
 
 ````
 
+### 全局响应拦截器
 
+````typescript
+// File common/response.ts
+import { Injectable, CallHandler, NestInterceptor } from "@nestjs/common";
+import { map } from "rxjs/operators";
+import { Observable } from "rxjs";
+
+interface Data<T> {
+  data: T;
+}
+
+@Injectable()
+export class ResponseInterception<T> implements NestInterceptor {
+  intercept(context, next: CallHandler): Observable<Data<T>> {
+    return next.handle().pipe(
+      map((data: T) => {
+        return {
+          data: data,
+          status: 0,
+          message: "操作成功",
+          success: true,
+        };
+      }),
+    );
+  }
+}
+
+// File main.ts
+import { NestExpressApplication } from "@nestjs/platform-express";
+import { ResponseInterception } from "./common/response";
+
+
+async function bootstrap() {
+		const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+      cors: true,
+    });
+  	app.useGlobalInterceptors(new ResponseInterception()); // 注册响应拦截器
+}
+````
+
+### 全局异常过滤器
+
+```typescript
+// File common/filter
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+} from "@nestjs/common";
+
+import { Request, Response } from "express";
+
+@Catch(HttpException)
+export class HttpExceptionFilter implements ExceptionFilter {
+  catch(exception: HttpException, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
+    const status = exception.getStatus();
+    response.status(status).json({
+      success: false,
+      time: new Date().toISOString(),
+      data: exception.message,
+      status,
+      path: request.url,
+    });
+  }
+}
+
+
+// File main.ts
+import { NestExpressApplication } from "@nestjs/platform-express";
+import { HttpExceptionFilter } from "./common/filter";
+
+
+async function bootstrap() {
+		const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+      cors: true,
+    });
+  	app.useGlobalFilters(new HttpExceptionFilter()); // 注册全局异常过滤器
+}
+```
 
 
 

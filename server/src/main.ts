@@ -4,6 +4,8 @@ import { VersioningType } from "@nestjs/common";
 import session from "express-session";
 import { Request, Response, NextFunction } from "express";
 import { NestExpressApplication } from "@nestjs/platform-express";
+import { ResponseInterception } from "./common/response"; // 导入全局响应拦截器
+import { HttpExceptionFilter } from "./common/filter"; // 导入全局异常过滤器
 import { join } from "path";
 
 const globalMiddleware = (req: Request, res: Response, next: NextFunction) => {
@@ -26,6 +28,10 @@ async function bootstrap() {
   });
   app.use(globalMiddleware);
   app.use(session({ secret: "saeqs", rolling: true, name: "connect.sid" }));
+
+  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalInterceptors(new ResponseInterception());
+
   await app.listen(process.env.PORT ?? 3000);
 }
 void bootstrap();
